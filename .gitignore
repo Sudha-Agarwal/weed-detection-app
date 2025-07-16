@@ -1,1 +1,33 @@
-**node_modules/
+# dependencies
+/node_modules
+
+# production
+/dist
+
+# local env files
+.env
+.env.*.local
+
+# testing
+/coverage
+
+# Vite cache
+/.vite
+
+# optional: VSCode and JetBrains IDE settings
+.vscode/
+.idea/
+
+# macOS system files
+.DS_Store
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# lockfiles (optional, depending on your workflow)
+/package-lock.json
+/pnpm-lock.yaml
+/yarn.lock
