@@ -68,6 +68,7 @@ export default function Home() {
   const [apiResults, setApiResults] = useState(null);
   const [annotatedImageUrl, setAnnotatedImageUrl] = useState(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [facingMode, setFacingMode] = useState("environment"); // default to back camera
 
   const fileInputRef = useRef(null);
   const canvasRef = useRef(null);
@@ -253,20 +254,30 @@ export default function Home() {
   // === CAMERA FUNCTIONS ===
 
   const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (err) {
-      toast({
-        title: "Camera Error",
-        description: "Could not access your camera.",
-        variant: "destructive",
-      });
-      setIsCameraOpen(false);
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: facingMode } },
+      audio: false,
+    });
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
     }
-  };
+  } catch (err) {
+    toast({
+      title: "Camera Error",
+      description: "Could not access your camera.",
+      variant: "destructive",
+    });
+    setIsCameraOpen(false);
+  }
+};
+const toggleCamera = () => {
+  setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
+  stopCamera();
+  setTimeout(startCamera, 300); // restart camera after toggle
+};
+
+
 
   const stopCamera = () => {
     const stream = videoRef.current?.srcObject;
@@ -374,19 +385,28 @@ export default function Home() {
             />
             <canvas ref={canvasRef} className="hidden" />
 
-            {isCameraOpen && (
-              <div className="mt-6">
-                <video ref={videoRef} autoPlay playsInline className="rounded-lg shadow-md w-full max-w-md mx-auto" />
-                <div className="flex justify-center gap-4 mt-4">
-                  <Button onClick={capturePhoto} className="bg-green-600 hover:bg-green-700 text-white">
-                    📸 Take Photo
-                  </Button>
-                  <Button onClick={stopCamera} className="bg-red-500 hover:bg-red-600 text-white">
-                    ❌ Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
+{isCameraOpen && (
+  <div className="mt-6">
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      className="rounded-lg shadow-md w-full max-w-md mx-auto"
+    />
+    <div className="flex justify-center gap-4 mt-4 flex-wrap">
+      <Button onClick={capturePhoto} className="bg-green-600 hover:bg-green-700 text-white">
+        📸 Take Photo
+      </Button>
+      <Button onClick={stopCamera} className="bg-red-500 hover:bg-red-600 text-white">
+        ❌ Cancel
+      </Button>
+      <Button onClick={toggleCamera} className="bg-blue-500 hover:bg-blue-600 text-white">
+        🔄 Switch Camera
+      </Button>
+    </div>
+  </div>
+)}
+
 
             {error && (
               <Alert className="mb-6 border-red-200 bg-red-50">
