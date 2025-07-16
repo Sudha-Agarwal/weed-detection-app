@@ -271,11 +271,44 @@ export default function Home() {
     setIsCameraOpen(false);
   }
 };
-const toggleCamera = () => {
-  setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
-  stopCamera();
-  setTimeout(startCamera, 300); // restart camera after toggle
+const toggleCamera = async () => {
+  try {
+    // Stop existing stream
+    const stream = videoRef.current?.srcObject;
+    if (stream && stream.getTracks) {
+      stream.getTracks().forEach((track) => track.stop());
+    }
+
+    // Switch mode
+    const newFacingMode = facingMode === "environment" ? "user" : "environment";
+    setFacingMode(newFacingMode);
+
+    // Slight delay to ensure camera is released
+    setTimeout(() => {
+      navigator.mediaDevices
+        .getUserMedia({ video: { facingMode: { ideal: newFacingMode } }, audio: false })
+        .then((newStream) => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = newStream;
+          }
+        })
+        .catch(() => {
+          toast({
+            title: "Camera Error",
+            description: "Could not access the selected camera.",
+            variant: "destructive",
+          });
+        });
+    }, 300);
+  } catch {
+    toast({
+      title: "Camera Error",
+      description: "Could not switch camera.",
+      variant: "destructive",
+    });
+  }
 };
+
 
 
 
