@@ -59,7 +59,6 @@ export default function Home() {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isLive, setIsLive] = useState(false);
   const [liveDetectionInterval, setLiveDetectionInterval] = useState(null);
-const [cameraFacing, setCameraFacing] = useState("environment");
 
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -163,46 +162,41 @@ const resetAll = () => {
       };
       img.src = imageData.url;
     });
-  const startCamera = async (facingMode = "environment") => {
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter(device => device.kind === "videoinput");
-
-    let targetDeviceId;
-
-    if (facingMode === "environment") {
-      // Try to find a rear-facing camera by label (works on most phones)
-      const backCamera = videoDevices.find(device =>
-        device.label.toLowerCase().includes("back") ||
-        device.label.toLowerCase().includes("rear")
-      );
-      targetDeviceId = backCamera?.deviceId || videoDevices[0]?.deviceId;
-    } else {
-      // Use first available camera for front (or fallback)
-      targetDeviceId = videoDevices[0]?.deviceId;
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+    } catch (err) {
+      toast({
+        title: "Camera Error",
+        description: "Rear camera not available, trying front...",
+        variant: "destructive",
+      });
+      // fallback to front
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "user" } },
+          audio: false,
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
+      } catch (err2) {
+        toast({
+          title: "Camera Error",
+          description: "Could not access any camera.",
+          variant: "destructive",
+        });
+      }
     }
-
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        deviceId: { exact: targetDeviceId },
-      },
-      audio: false,
-    });
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.play();
-    }
-  } catch (err) {
-    toast({
-      title: "Camera Error",
-      description: `Failed to access ${facingMode} camera.`,
-      variant: "destructive",
-    });
-    console.error(err);
-  }
-};
-
+  };
 
   const stopCamera = () => {
     const stream = videoRef.current?.srcObject;
@@ -214,25 +208,12 @@ const resetAll = () => {
   };
 
   const startLiveDetection = async () => {
-  if (isLive) return; // prevent multiple intervals
-  resetAll();
-  setIsLive(true);
-  await startCamera();
-
-  const checkVideoReady = () => {
-    const video = videoRef.current;
-    if (video && video.videoWidth > 0 && video.videoHeight > 0) {
-      const interval = setInterval(runLiveDetection, 2000);
-      setLiveDetectionInterval(interval);
-    } else {
-      // Retry in 100ms until video is ready
-      setTimeout(checkVideoReady, 100);
-    }
+    resetAll();
+    await startCamera();
+    setIsLive(true);
+    const interval = setInterval(runLiveDetection, 2000);
+    setLiveDetectionInterval(interval);
   };
-
-  checkVideoReady();
-};
-
 
   const stopLiveDetection = () => {
     clearInterval(liveDetectionInterval);
@@ -246,8 +227,8 @@ const resetAll = () => {
 
   const runLiveDetection = async () => {
     const video = videoRef.current;
-  const canvas = liveCanvasRef.current;
-    if (!video || !canvas || video.videoWidth === 0 || video.videoHeight === 0) return;
+    const canvas = liveCanvasRef.current;
+    if (!video || !canvas) return;
 
     const ctx = canvas.getContext("2d");
     canvas.width = video.videoWidth;
@@ -290,20 +271,33 @@ const resetAll = () => {
     }
   };
 
-const toggleCamera = () => {
-  const newFacing = cameraFacing === "environment" ? "user" : "environment";
-  setCameraFacing(newFacing);
-
-  // Stop old stream
+const toggleCamera = async () => {
+  // Stop current tracks
   const oldStream = videoRef.current?.srcObject;
-  if (oldStream && oldStream.getTracks) {
-    oldStream.getTracks().forEach(track => track.stop());
+  if (oldStream && oldStream.getTracks) oldStream.getTracks().forEach(t => t.stop());
+
+  // Decide new facing mode based on current data-facing on container
+  const container = document.getElementById("camera-container") || document.getElementById("live-container");
+  const current = container?.getAttribute("data-facing") || "environment";
+  const facingMode = current === "environment" ? "user" : "environment";
+
+  try {
+    const newStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: facingMode } },
+      audio: false,
+    });
+    if (videoRef.current) {
+      videoRef.current.srcObject = newStream;
+      container?.setAttribute("data-facing", facingMode);
+    }
+  } catch (err) {
+    toast({
+      title: "Switch Error",
+      description: `Can't access ${facingMode === 'user' ? 'front' : 'rear'} camera.`,
+      variant: "destructive",
+    });
   }
-
-  // Start new stream with updated facing mode
-  startCamera(newFacing);
 };
-
 
 
 const capturePhoto = () => {
@@ -377,30 +371,13 @@ const toggleFullscreen = (element) => {
                   </>
                 )}
               </Button>
-<Button
-  onClick={() => {
-    stopLiveDetection(); // 🔴 stop live if running
-    resetAll();
-    setIsLive(false);
-    setIsCameraOpen(true);
-    startCamera();
-  }}
-  className="bg-purple-600 text-white"
->
-  <Plus className="w-4 h-4 mr-2" />
-  Capture with Camera
-</Button>
-<Button
-  onClick={() => {
-    stopCamera(); // 🔴 stop camera mode
-    resetAll();
-    setIsCameraOpen(false);
-    startLiveDetection();
-  }}
-  className="bg-orange-500 text-white"
->
-  🎥 Start Live Detection
-</Button>
+              <Button onClick={() => { resetAll(); setIsCameraOpen(true); startCamera(); }} className="bg-purple-600 text-white">
+                <Plus className="w-4 h-4 mr-2" />
+                Capture with Camera
+              </Button>
+              <Button onClick={startLiveDetection} className="bg-orange-500 text-white">
+                🎥 Start Live Detection
+              </Button>
               {isLive && (
                 <Button onClick={stopLiveDetection} className="bg-red-600 text-white">
                   🛑 Stop Live Detection
