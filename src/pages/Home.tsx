@@ -59,6 +59,7 @@ export default function Home() {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isLive, setIsLive] = useState(false);
   const [liveDetectionInterval, setLiveDetectionInterval] = useState(null);
+const [cameraFacing, setCameraFacing] = useState("environment");
 
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -285,32 +286,35 @@ const resetAll = () => {
   };
 
 const toggleCamera = async () => {
-  // Stop current tracks
-  const oldStream = videoRef.current?.srcObject;
-  if (oldStream && oldStream.getTracks) oldStream.getTracks().forEach(t => t.stop());
+  const newFacing = cameraFacing === "environment" ? "user" : "environment";
 
-  // Decide new facing mode based on current data-facing on container
-  const container = document.getElementById("camera-container") || document.getElementById("live-container");
-  const current = container?.getAttribute("data-facing") || "environment";
-  const facingMode = current === "environment" ? "user" : "environment";
+  // Stop current stream
+  const oldStream = videoRef.current?.srcObject;
+  if (oldStream && oldStream.getTracks) {
+    oldStream.getTracks().forEach((t) => t.stop());
+  }
 
   try {
     const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: facingMode } },
+      video: { facingMode: { ideal: newFacing } },
       audio: false,
     });
+
     if (videoRef.current) {
       videoRef.current.srcObject = newStream;
-      container?.setAttribute("data-facing", facingMode);
+      videoRef.current.play();
     }
+
+    setCameraFacing(newFacing); // Update facing mode state
   } catch (err) {
     toast({
       title: "Switch Error",
-      description: `Can't access ${facingMode === 'user' ? 'front' : 'rear'} camera.`,
+      description: `Can't access ${newFacing === "user" ? "front" : "rear"} camera.`,
       variant: "destructive",
     });
   }
 };
+
 
 
 const capturePhoto = () => {
