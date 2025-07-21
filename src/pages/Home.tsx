@@ -384,13 +384,30 @@ const toggleFullscreen = (element) => {
                   </>
                 )}
               </Button>
-              <Button onClick={() => { resetAll(); setIsCameraOpen(true); startCamera(); }} className="bg-purple-600 text-white">
-                <Plus className="w-4 h-4 mr-2" />
-                Capture with Camera
-              </Button>
-              <Button onClick={startLiveDetection} className="bg-orange-500 text-white">
-                🎥 Start Live Detection
-              </Button>
+<Button
+  onClick={() => {
+    stopLiveDetection(); // 🔴 stop live if running
+    resetAll();
+    setIsLive(false);
+    setIsCameraOpen(true);
+    startCamera();
+  }}
+  className="bg-purple-600 text-white"
+>
+  <Plus className="w-4 h-4 mr-2" />
+  Capture with Camera
+</Button>
+<Button
+  onClick={() => {
+    stopCamera(); // 🔴 stop camera mode
+    resetAll();
+    setIsCameraOpen(false);
+    startLiveDetection();
+  }}
+  className="bg-orange-500 text-white"
+>
+  🎥 Start Live Detection
+</Button>
               {isLive && (
                 <Button onClick={stopLiveDetection} className="bg-red-600 text-white">
                   🛑 Stop Live Detection
