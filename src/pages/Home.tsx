@@ -438,18 +438,22 @@ const toggleFullscreen = (element) => {
     </div>
 
     {/* White background for buttons */}
-    <div className="flex justify-center gap-4 p-4 flex-wrap bg-white rounded-b-lg">
-      <Button onClick={handleCaptureAndDetect} className="bg-green-700 text-white">
-        <Camera className="w-4 h-4 mr-2" /> Capture Detection Image
-      </Button>
-      <Button
-        onClick={() => toggleFullscreen(document.getElementById("live-container"))}
-        className="bg-gray-600 hover:bg-gray-700 text-white"
-      >
-        🖥️ Fullscreen
-      </Button>
-      
-    </div>
+{/* White background for buttons */}
+<div className="flex justify-center gap-4 p-4 flex-wrap bg-white rounded-b-lg">
+  <Button onClick={handleCaptureAndDetect} className="bg-green-700 text-white">
+    <Camera className="w-4 h-4 mr-2" /> Capture Detection Image
+  </Button>
+  <Button
+    onClick={() => toggleFullscreen(document.getElementById("live-container"))}
+    className="bg-gray-600 hover:bg-gray-700 text-white"
+  >
+    🖥️ Fullscreen
+  </Button>
+  <Button onClick={toggleCamera} className="bg-blue-600 hover:bg-blue-700 text-white">
+    🔄 Switch Camera
+  </Button>
+</div>
+
   </div>
 )}
 
