@@ -163,41 +163,46 @@ const resetAll = () => {
       };
       img.src = imageData.url;
     });
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false,
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-    } catch (err) {
-      toast({
-        title: "Camera Error",
-        description: "Rear camera not available, trying front...",
-        variant: "destructive",
-      });
-      // fallback to front
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "user" } },
-          audio: false,
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-        }
-      } catch (err2) {
-        toast({
-          title: "Camera Error",
-          description: "Could not access any camera.",
-          variant: "destructive",
-        });
-      }
+  const startCamera = async (facingMode = "environment") => {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === "videoinput");
+
+    let targetDeviceId;
+
+    if (facingMode === "environment") {
+      // Try to find a rear-facing camera by label (works on most phones)
+      const backCamera = videoDevices.find(device =>
+        device.label.toLowerCase().includes("back") ||
+        device.label.toLowerCase().includes("rear")
+      );
+      targetDeviceId = backCamera?.deviceId || videoDevices[0]?.deviceId;
+    } else {
+      // Use first available camera for front (or fallback)
+      targetDeviceId = videoDevices[0]?.deviceId;
     }
-  };
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        deviceId: { exact: targetDeviceId },
+      },
+      audio: false,
+    });
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play();
+    }
+  } catch (err) {
+    toast({
+      title: "Camera Error",
+      description: `Failed to access ${facingMode} camera.`,
+      variant: "destructive",
+    });
+    console.error(err);
+  }
+};
+
 
   const stopCamera = () => {
     const stream = videoRef.current?.srcObject;
@@ -285,34 +290,18 @@ const resetAll = () => {
     }
   };
 
-const toggleCamera = async () => {
+const toggleCamera = () => {
   const newFacing = cameraFacing === "environment" ? "user" : "environment";
+  setCameraFacing(newFacing);
 
-  // Stop current stream
+  // Stop old stream
   const oldStream = videoRef.current?.srcObject;
   if (oldStream && oldStream.getTracks) {
-    oldStream.getTracks().forEach((t) => t.stop());
+    oldStream.getTracks().forEach(track => track.stop());
   }
 
-  try {
-    const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: newFacing } },
-      audio: false,
-    });
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = newStream;
-      videoRef.current.play();
-    }
-
-    setCameraFacing(newFacing); // Update facing mode state
-  } catch (err) {
-    toast({
-      title: "Switch Error",
-      description: `Can't access ${newFacing === "user" ? "front" : "rear"} camera.`,
-      variant: "destructive",
-    });
-  }
+  // Start new stream with updated facing mode
+  startCamera(newFacing);
 };
 
 
