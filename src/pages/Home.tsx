@@ -271,33 +271,34 @@ const resetAll = () => {
     }
   };
 
-  const toggleCamera = async () => {
-  const stream = videoRef.current?.srcObject;
-  if (stream && stream.getTracks) {
-    stream.getTracks().forEach((track) => track.stop());
-  }
+const toggleCamera = async () => {
+  // Stop current tracks
+  const oldStream = videoRef.current?.srcObject;
+  if (oldStream && oldStream.getTracks) oldStream.getTracks().forEach(t => t.stop());
+
+  // Decide new facing mode based on current data-facing on container
+  const container = document.getElementById("camera-container") || document.getElementById("live-container");
+  const current = container?.getAttribute("data-facing") || "environment";
+  const facingMode = current === "environment" ? "user" : "environment";
 
   try {
-    const currentFacingMode = videoRef.current?.getAttribute("data-facing") || "environment";
-    const newFacing = currentFacingMode === "user" ? "environment" : "user";
-
     const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: newFacing } },
+      video: { facingMode: { ideal: facingMode } },
       audio: false,
     });
-
     if (videoRef.current) {
       videoRef.current.srcObject = newStream;
-      videoRef.current.setAttribute("data-facing", newFacing);
+      container?.setAttribute("data-facing", facingMode);
     }
   } catch (err) {
     toast({
-      title: "Camera Switch Error",
-      description: "Could not switch camera.",
+      title: "Switch Error",
+      description: `Can't access ${facingMode === 'user' ? 'front' : 'rear'} camera.`,
       variant: "destructive",
     });
   }
 };
+
 
 const capturePhoto = () => {
   const video = videoRef.current;
