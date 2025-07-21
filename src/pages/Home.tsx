@@ -208,12 +208,25 @@ const resetAll = () => {
   };
 
   const startLiveDetection = async () => {
-    resetAll();
-    await startCamera();
-    setIsLive(true);
-    const interval = setInterval(runLiveDetection, 2000);
-    setLiveDetectionInterval(interval);
+  if (isLive) return; // prevent multiple intervals
+  resetAll();
+  setIsLive(true);
+  await startCamera();
+
+  const checkVideoReady = () => {
+    const video = videoRef.current;
+    if (video && video.videoWidth > 0 && video.videoHeight > 0) {
+      const interval = setInterval(runLiveDetection, 2000);
+      setLiveDetectionInterval(interval);
+    } else {
+      // Retry in 100ms until video is ready
+      setTimeout(checkVideoReady, 100);
+    }
   };
+
+  checkVideoReady();
+};
+
 
   const stopLiveDetection = () => {
     clearInterval(liveDetectionInterval);
@@ -227,8 +240,8 @@ const resetAll = () => {
 
   const runLiveDetection = async () => {
     const video = videoRef.current;
-    const canvas = liveCanvasRef.current;
-    if (!video || !canvas) return;
+  const canvas = liveCanvasRef.current;
+    if (!video || !canvas || video.videoWidth === 0 || video.videoHeight === 0) return;
 
     const ctx = canvas.getContext("2d");
     canvas.width = video.videoWidth;
